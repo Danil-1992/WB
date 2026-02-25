@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import path from 'path';
-import cron from 'node-cron';
 import db from './db';
 import env from './env';
 
