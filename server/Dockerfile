@@ -1,16 +1,28 @@
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY tsconfig.json ./
+RUN npm ci
+
+COPY src ./src
+
+RUN npm run build
+
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем зависимости
-COPY package*.json ./
-RUN npm ci
+COPY --from=builder /app/dist ./dist
 
-# Копируем весь код
-COPY . .
+COPY --from=builder /app/src/knexfile.js ./knexfile.js
 
-# Делаем скрипт исполняемым
-RUN chmod +x /app
+COPY --from=builder /app/src/migrations ./migrations
 
-# Запускаем миграции и приложение
-CMD ["sh", "-c", "cd /app && NODE_ENV=development npx knex migrate:latest --knexfile=src/knexfile.js && node src/index.js"]
+COPY --from=builder /app/package*.json ./
+COPY credentials.json ./
+
+RUN npm ci --only=production
+
+CMD ["sh", "-c", "npx knex migrate:latest --knexfile=./knexfile.js && node dist/index.js"]
